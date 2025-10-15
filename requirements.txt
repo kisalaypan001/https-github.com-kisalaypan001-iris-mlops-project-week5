@@ -1,0 +1,6 @@
+scikit-learn
+pandas
+joblib
+pytest      # keep installed if you want; unittest is builtin
+dvc
+cml
