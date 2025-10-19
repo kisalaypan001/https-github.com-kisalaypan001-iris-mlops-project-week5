@@ -1,6 +1,7 @@
 scikit-learn
 pandas
 joblib
-pytest      # keep installed if you want; unittest is builtin
+pytest    
 dvc
 cml
+"dvc[gcs]"
