@@ -1,7 +1,6 @@
-scikit-learn
-pandas
-joblib
-pytest    
-dvc
-cml
-dvc[gcs]
+scikit-learn==1.4.2
+pandas==2.2.2
+joblib==1.4.2
+pytest==8.2.2
+dvc[gcs]==3.63.0
+cml==0.0.1
