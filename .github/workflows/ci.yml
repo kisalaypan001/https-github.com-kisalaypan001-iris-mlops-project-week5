@@ -1,0 +1,56 @@
+name: IRIS Model CI
+
+# Triggers on push or PR for BOTH main and dev
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    # Grant permissions for CML to write comments
+    permissions:
+      contents: write
+      pull-requests: write 
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          pip cache purge
+          pip install --no-cache-dir -r requirements.txt
+          pip install dvc-gs
+      - name: Authenticate with Google Cloud
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Fetch model from DVC
+        run: dvc pull
+
+      - name: Setup CML
+        uses: iterative/setup-cml@v2
+
+      - name: Run unit tests and generate report
+        run: |
+          python -m unittest test.py > report.md 2>&1
+          echo "## ✅ Test Results" >> report.md
+          cat report.md
+
+      - name: Create CML report on Pull Request
+        env:
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cml comment create report.md
