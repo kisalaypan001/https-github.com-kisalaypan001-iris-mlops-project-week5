@@ -4,4 +4,4 @@ joblib
 pytest    
 dvc
 cml
-"dvc[gcs]"
+dvc[gcs]
