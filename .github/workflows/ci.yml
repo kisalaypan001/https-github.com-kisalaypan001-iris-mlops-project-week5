@@ -31,7 +31,7 @@ jobs:
         run: |
           pip cache purge
           pip install --no-cache-dir -r requirements.txt
-
+          pip install dvc-gs
       - name: Authenticate with Google Cloud
         uses: 'google-github-actions/auth@v2'
         with:
