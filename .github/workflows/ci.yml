@@ -61,18 +61,19 @@ jobs:
         uses: iterative/setup-cml@v2
         
       - name: 🧪 Run Unit Tests (Fetch Production Model from MLflow)
-        # The test.py script is now expected to call mlflow.sklearn.load_model() 
-        # to fetch the latest/best model from the MLflow Model Registry.
+        # ... content ...
         run: |
           echo "## 🧪 Running Unit Tests on MLflow Production Model" > cml_report.md
           pytest -v tests/test_model.py >> cml_report.md 2>&1
           
-      # ⬇️ THIS IS THE CORRECTED STEP (PREVIOUSLY LINE 62) ⬇️
+      # ⬇️ PREVIOUSLY INCORRECTLY NESTED STEP (Starting with the dash on a new line) ⬇️
+      # This step should be a SIBLING of the step above, aligned to the same column.
       - name: Append Metrics (Optional: DVC or MLflow Run Metrics)
-        # This is a separate step, so it starts with '- name:' aligned with its siblings.
+        # Line 71 is likely the start of the 'run:' block or the first command below it.
+        # Ensure 'run:' is indented 2 spaces from 'name:'.
         run: |
+          # Ensure this command is indented 2 spaces from 'run: |'
           echo "## 📊 MLflow Run Metrics" >> cml_report.md
-          # NOTE: To grab metrics from the best run, you'd typically use the MLflow API/CLI.
           # Example: dvc metrics show >> cml_report.md || true
           
       - name: Create CML report on Pull Request
