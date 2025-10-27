@@ -1,0 +1,83 @@
+name: IRIS Model CI - MLflow Integration
+
+# Triggers on push or PR for BOTH main and dev
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  run-pipeline-and-tests:
+    runs-on: ubuntu-latest
+    # Grant permissions for CML to write comments and use GITHUB_TOKEN for MLflow (if applicable)
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    env:
+      # CRITICAL: Set the MLflow Tracking URI. 
+      # This must point to your running MLflow server (VM IP:5000) or a file path.
+      MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+      # Optional: Add authentication secrets if your server is protected
+      # MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
+      # MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          
+      - name: Install dependencies (MLflow, DVC, CML, etc.)
+        run: |
+          pip install --no-cache-dir -r requirements.txt
+          # pip install dvc-gs # Only needed if DVC remote is GCS
+          pip install pytest  # Ensure pytest is installed for test execution
+
+      - name: Authenticate with Google Cloud (for DVC data pull)
+        # This step is kept to authenticate DVC for DATA, but removed for the MODEL.
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: DVC Pull Data Only (Model is from MLflow)
+        # We explicitly pull only the data, NOT the model.
+        run: dvc pull data
+
+      - name: 🚀 Run Hyperparameter Tuning and Log to MLflow
+        # This step executes train.py, which runs the tuning loop 
+        # and logs all models/metrics/params to the MLflow server.
+        run: python train.py
+
+      - name: Setup CML
+        uses: iterative/setup-cml@v2
+        
+      - name: 🧪 Run Unit Tests (Fetch Production Model from MLflow)
+        # The test.py script is now expected to call mlflow.sklearn.load_model() 
+        # to fetch the latest/best model from the MLflow Model Registry.
+        run: |
+          echo "## 🧪 Running Unit Tests on MLflow Production Model" > cml_report.md
+          pytest -v tests/test_model.py >> cml_report.md 2>&1
+          
+      # ⬇️ THIS IS THE CORRECTED STEP (PREVIOUSLY LINE 62) ⬇️
+      - name: Append Metrics (Optional: DVC or MLflow Run Metrics)
+        # This is a separate step, so it starts with '- name:' aligned with its siblings.
+        run: |
+          echo "## 📊 MLflow Run Metrics" >> cml_report.md
+          # NOTE: To grab metrics from the best run, you'd typically use the MLflow API/CLI.
+          # Example: dvc metrics show >> cml_report.md || true
+          
+      - name: Create CML report on Pull Request
+        if: github.event_name == 'pull_request'
+        env:
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cml comment create cml_report.md

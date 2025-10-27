@@ -1,6 +1,5 @@
-scikit-learn
-pandas
-joblib
-pytest      # keep installed if you want; unittest is builtin
-dvc
-cml
+scikit-learn==1.4.2
+pandas==2.2.2
+joblib==1.4.2
+pytest==8.2.2
+dvc[gcs]==3.63.0
