@@ -3,3 +3,8 @@ pandas==2.2.2
 joblib==1.4.2
 pytest==8.2.2
 dvc[gcs]==3.63.0
+# Experiment Tracking and Model Registry
+mlflow
+
+# Hyperparameter Tuning (Chosen for the demonstration)
+hyperopt
