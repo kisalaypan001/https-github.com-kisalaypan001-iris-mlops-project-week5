@@ -67,12 +67,12 @@ jobs:
           echo "## 🧪 Running Unit Tests on MLflow Production Model" > cml_report.md
           pytest -v tests/test_model.py >> cml_report.md 2>&1
           
-      - name: Append Metrics (Optional: DVC or MLflow Run Metrics)
-        run: |
-          echo "## 📊 MLflow Run Metrics" >> cml_report.md
-          # NOTE: To grab metrics from the best run, you'd typically use the MLflow API/CLI.
-          # For a basic sanity check, we can rely on CML/DVC for general metrics if available.
-          # Example: dvc metrics show >> cml_report.md || true
+        - name: Append Metrics (Optional: DVC or MLflow Run Metrics)
+         run: |
+           echo "## 📊 MLflow Run Metrics" >> cml_report.md
+           # NOTE: To grab metrics from the best run, you'd typically use the MLflow API/CLI.
+           # For a basic sanity check, we can rely on CML/DVC for general metrics if available.
+           # Example: dvc metrics show >> cml_report.md || true
           
       - name: Create CML report on Pull Request
         if: github.event_name == 'pull_request'
