@@ -17,6 +17,8 @@ jobs:
     env:
       # Your MLflow tracking server URI (set via GitHub secrets)
       MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+      # Make GCP key available for safer access
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
 
     steps:
       - name: Checkout repository
@@ -32,13 +34,12 @@ jobs:
           pip install --no-cache-dir -r requirements.txt
           pip install pytest
 
-      # ✅ Authenticate with Google Cloud using your saved secret
-      # (Will only run if secret exists and is accessible)
+      # ✅ Authenticate with Google Cloud (always runs; will fail gracefully if secret not set)
       - name: Authenticate with Google Cloud
-        if: ${{ secrets.GCP_SA_KEY != '' }}
+        if: ${{ env.GCP_SA_KEY != '' }}
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          credentials_json: ${{ env.GCP_SA_KEY }}
 
       - name: DVC Pull Data Only (Model is from MLflow)
         run: dvc pull data
