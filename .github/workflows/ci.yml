@@ -15,9 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # Your MLflow tracking server URI (set via GitHub secrets)
       MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
-      # GCP Service Account Key (used for DVC GCS remote auth)
       GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
 
     steps:
@@ -32,35 +30,31 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --no-cache-dir -r requirements.txt
-          pip install pytest
+          pip install pytest mlflow
 
+      # (Optional) Authenticate with Google Cloud if your MLflow server or data are hosted there
       - name: Authenticate with Google Cloud
+        if: env.GCP_SA_KEY != ''
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ env.GCP_SA_KEY }}
 
-      - name: DVC Pull Data Only (Model is from MLflow)
-        # Assuming your data file is tracked as data/iris_local.csv.dvc
-        run: dvc pull data/iris_local.csv
-
-      - name: Run Hyperparameter Tuning and Log to MLflow
+      - name: 🚀 Run Training and Log to MLflow
         run: python train.py
 
       - name: Setup CML
         uses: iterative/setup-cml@v2
 
-      - name: Run Unit Tests (Fetch Production Model from MLflow)
+      - name: 🧪 Run Unit Tests (using MLflow Production Model)
         run: |
           echo "## Running Unit Tests on MLflow Production Model" > cml_report.md
           pytest -v tests/test_model.py >> cml_report.md 2>&1
 
-      - name: Append Metrics
+      - name: 📊 Append Metrics
         run: |
           echo "## MLflow Run Metrics" >> cml_report.md
-          # Optionally include DVC metrics:
-          # dvc metrics show >> cml_report.md || true
 
-      - name: Create CML report on Pull Request
+      - name: 💬 Post CML Report to PR
         if: ${{ github.event_name == 'pull_request' }}
         env:
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
