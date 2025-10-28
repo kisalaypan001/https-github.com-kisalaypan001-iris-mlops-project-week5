@@ -41,7 +41,7 @@ jobs:
 
       - name: DVC Pull Data Only (Model is from MLflow)
         # Assuming your data file is tracked as data/iris_local.csv.dvc
-        run: dvc pull data/iris_local.csv.dvc
+        run: dvc pull data/iris_local.csv
 
       - name: Run Hyperparameter Tuning and Log to MLflow
         run: python train.py
