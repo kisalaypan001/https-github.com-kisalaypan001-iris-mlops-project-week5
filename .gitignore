@@ -1,0 +1,14 @@
+# Virtual environments
+.venv/
+venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# DVC, MLflow, build, and OS junk
+.dvc/
+mlruns/
+*.db
+*.log
+.DS_Store
