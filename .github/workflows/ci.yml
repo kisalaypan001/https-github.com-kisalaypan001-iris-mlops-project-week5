@@ -1,31 +1,24 @@
 name: IRIS Model CI - MLflow Integration
 
-# Triggers on push or PR for BOTH main and dev
 on:
   push:
-    branches:
-      - main
-      - dev
+    branches: [ main, dev ]
   pull_request:
-    branches:
-      - main
-      - dev
+    branches: [ main, dev ]
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   run-pipeline-and-tests:
     runs-on: ubuntu-latest
-    # Grant permissions for CML to write comments and use GITHUB_TOKEN for MLflow (if applicable)
-    permissions:
-      contents: write
-      pull-requests: write
-    
+
     env:
-      # CRITICAL: Set the MLflow Tracking URI. 
-      # This must point to your running MLflow server (VM IP:5000) or a file path.
+      # Your MLflow tracking server URI (set via GitHub secrets)
       MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
-      # Optional: Add authentication secrets if your server is protected
-      # MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
-      # MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
+      # Make GCP key available for safer access
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
 
     steps:
       - name: Checkout repository
@@ -35,49 +28,41 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.9'
-          
-      - name: Install dependencies (MLflow, DVC, CML, etc.)
+
+      - name: Install dependencies
         run: |
           pip install --no-cache-dir -r requirements.txt
-          # pip install dvc-gs # Only needed if DVC remote is GCS
-          pip install pytest  # Ensure pytest is installed for test execution
+          pip install pytest
 
-      - name: Authenticate with Google Cloud (for DVC data pull)
-        # This step is kept to authenticate DVC for DATA, but removed for the MODEL.
-        uses: 'google-github-actions/auth@v2'
+      # ✅ Authenticate with Google Cloud (always runs; will fail gracefully if secret not set)
+      - name: Authenticate with Google Cloud
+        if: ${{ env.GCP_SA_KEY != '' }}
+        uses: google-github-actions/auth@v2
         with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          credentials_json: ${{ env.GCP_SA_KEY }}
 
       - name: DVC Pull Data Only (Model is from MLflow)
-        # We explicitly pull only the data, NOT the model.
         run: dvc pull data
 
-      - name: 🚀 Run Hyperparameter Tuning and Log to MLflow
-        # This step executes train.py, which runs the tuning loop 
-        # and logs all models/metrics/params to the MLflow server.
+      - name: Run Hyperparameter Tuning and Log to MLflow
         run: python train.py
 
       - name: Setup CML
         uses: iterative/setup-cml@v2
-        
-      - name: 🧪 Run Unit Tests (Fetch Production Model from MLflow)
-        # ... content ...
+
+      - name: Run Unit Tests (Fetch Production Model from MLflow)
         run: |
-          echo "## 🧪 Running Unit Tests on MLflow Production Model" > cml_report.md
+          echo "## Running Unit Tests on MLflow Production Model" > cml_report.md
           pytest -v tests/test_model.py >> cml_report.md 2>&1
-          
-      # ⬇️ START OF THE PROBLEM BLOCK ⬇️
-      - name: Append Metrics (Optional: DVC or MLflow Run Metrics)
-        # Line 71: Ensure 'run:' is indented 2 spaces from 'name:'.
+
+      - name: Append Metrics
         run: |
-          # The commands must be indented 2 spaces further.
-          echo "## 📊 MLflow Run Metrics" >> cml_report.md
-          # Example: dvc metrics show >> cml_report.md || true
-          
-      # ⬇️ NEXT STEP MUST ALIGN ⬇️
+          echo "## MLflow Run Metrics" >> cml_report.md
+          # Optionally include DVC metrics:
+          # dvc metrics show >> cml_report.md || true
+
       - name: Create CML report on Pull Request
-        if: github.event_name == 'pull_request'
+        if: ${{ github.event_name == 'pull_request' }}
         env:
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          cml comment create cml_report.md
+        run: cml comment create cml_report.md
