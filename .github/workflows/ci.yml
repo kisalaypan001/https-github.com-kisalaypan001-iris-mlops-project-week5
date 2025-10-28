@@ -1,6 +1,5 @@
 name: IRIS Model CI - MLflow Integration
 
-# ✅ Triggers on push or PR for BOTH main and dev
 on:
   push:
     branches:
@@ -15,58 +14,57 @@ jobs:
   run-pipeline-and-tests:
     runs-on: ubuntu-latest
 
-    # ✅ Permissions for CML comments and MLflow integration
     permissions:
       contents: write
       pull-requests: write
 
     env:
-      # MLflow Tracking URI (set via GitHub Secrets)
       MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
-      # Optional: Add authentication if your MLflow server requires it
+      # Optional:
       # MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
       # MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
 
     steps:
-      - name: 🛎️ Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🐍 Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.9'
 
-      - name: 📦 Install dependencies (MLflow, DVC, CML, etc.)
+      - name: Install dependencies (MLflow, DVC, CML, etc.)
         run: |
           pip install --no-cache-dir -r requirements.txt
-          pip install pytest  # Ensure pytest is installed
+          pip install pytest
 
-      - name: 🔐 Authenticate with Google Cloud (for DVC data pull)
+      - name: Authenticate with Google Cloud (for DVC data pull)
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: 📥 DVC Pull Data Only (Model is from MLflow)
+      - name: DVC Pull Data Only (Model is from MLflow)
         run: dvc pull data
 
-      - name: 🚀 Run Hyperparameter Tuning and Log to MLflow
+      - name: Run Hyperparameter Tuning and Log to MLflow
         run: python train.py
 
-      - name: ⚙️ Setup CML
+      - name: Setup CML
         uses: iterative/setup-cml@v2
 
-      - name: 🧪 Run Unit Tests (Fetch Production Model from MLflow)
+      - name: Run Unit Tests (Fetch Production Model from MLflow)
         run: |
-          echo "## 🧪 Running Unit Tests on MLflow Production Model" > cml_report.md
+          echo "## Running Unit Tests on MLflow Production Model" > cml_report.md
           pytest -v tests/test_model.py >> cml_report.md 2>&1
 
-      - name: 📊 Append Metrics (Optional: DVC or MLflow Run Metrics)
+      - name: Append Metrics (Optional: DVC or MLflow Run Metrics)
         run: |
-          echo "## 📊 MLflow Run Metrics" >> cml_report.md
-          # Example: dvc metrics show >> cml_report.md || true
+          echo "## MLflow Run Metrics" >> cml_report.md
+          # Example to append DVC metrics (if used):
+          # dvc metrics show >> cml_report.md || true
 
-      - name: 💬 Create CML report on Pull Request
-        if: github.event_name == 'pull_request'
+      - name: Create CML report on Pull Request
+        if: ${{ github.event_name == 'pull_request' }}
         env:
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
