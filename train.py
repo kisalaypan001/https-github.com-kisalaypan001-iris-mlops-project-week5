@@ -26,7 +26,7 @@ def get_mlflow_uri():
 
 def init_mlflow():
     uri = get_mlflow_uri()
-    mlflow.set_tracking_uri(uri)
+    mlflow.set_tracking_uri("http://127.0.0.1:5000")
     try:
         # set_experiment will create the experiment if it doesn't exist
         mlflow.set_experiment(EXPERIMENT_NAME)
